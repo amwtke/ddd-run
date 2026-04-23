@@ -113,18 +113,34 @@ public <ReturnType> <methodName>(<params>) {
 - ❌ 不得修改 `DOMAIN.md` 之外的术语(命名必须一致)
 - ❌ 不得绕过聚合根直接修改内部实体
 - ✅ 必须先写测试(TDD),再写实现
-- ✅ 必须为每个测试场景写一个 @Test
+- ✅ 必须为每个测试场景写一个测试用例
+
+## 交给 Superpowers 的开放问题(技术实施层面)
+
+本 spec **不回答**以下问题,留给 `superpowers:brainstorming` 在进入 `writing-plans` 之前回答,并把决策写回 `CLAUDE.md` 的"## 技术栈约定"段:
+
+- **语言 / 运行时**:Java / Kotlin / Go / Rust / Node / Python / ... ?
+- **应用框架**:Spring Boot / Ktor / Axum / Express / FastAPI / ... ?
+- **持久化**:关系型 / 文档型 / 事件存储 / 内存?schema 由谁生成?
+- **范围**:仅后端服务,还是前后端全栈?若含前端,用什么框架?
+- **对外交互形态**:REST / gRPC / GraphQL / CLI / 消息?
+- **测试框架 / 构建工具**
+- **部署形态**:单体 / 模块化单体 / 微服务?
+- **非功能约束**:并发量级、延迟预算、数据规模?
+
+> 首次进入实现阶段时必答;若 `CLAUDE.md` 的技术栈段已填,则跳过并直接进入 `writing-plans`。
 
 ## 下一步
 
-将本 spec 交给 Superpowers:
-1. 用 Superpowers 的 spec → test 流程生成测试骨架
-2. 让测试失败
-3. 实现聚合根方法让测试通过
-4. 重构
+把本 spec 交给 Superpowers 全流程:
+
+1. **`superpowers:brainstorming`**(首次):回答上面"交给 Superpowers 的开放问题",把技术栈 / 范围 / 交互形态决策写回 `CLAUDE.md`
+2. **`superpowers:writing-plans`**:基于 spec + 已确定栈,产出分步实施计划
+3. **`superpowers:executing-plans`** + TDD:先写失败测试 → 最小改动通过 → 重构
+4. **`superpowers:finishing-a-development-branch`**:验证全绿 → 合并/开 PR
 
 执行建议:
-> 请 Superpowers 读取 `docs/specs/spec-<n>-<slug>.md`,按 TDD 流程实现。
+> 请 Superpowers 读取 `docs/specs/spec-<n>-<slug>.md`。若 `CLAUDE.md` 技术栈段未填,先启动 brainstorming 决定技术栈与范围并写回;否则直接进入 writing-plans。
 > 实现过程中如发现 DOMAIN.md 中有不一致或缺失的术语,停下来回到 `/ddd-model` 修正。
 ```
 
@@ -155,12 +171,3 @@ public <ReturnType> <methodName>(<params>) {
 
 - 产出:`docs/specs/spec-<自增序号>-<slug>.md`
 - 如果目录不存在,先创建
-
-## 面试场景提示
-
-面试时用 `/ddd-spec` 的价值在于**向考官可视化你的建模→实现链路**:
-1. 先展示 DOMAIN.md(架构思考)
-2. 再展示 spec(用例切分)
-3. 最后让 Superpowers 按 spec 跑 TDD(AI 协作能力)
-
-这三步对应的正是面试官打分的三个维度:DDD 建模 + 工程拆解 + AI 驾驭。

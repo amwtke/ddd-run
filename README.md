@@ -7,13 +7,17 @@
 ```
    业务需求
        ↓
-  /ddd-storm  ──→ docs/ddd/01-event-storming-*.md     (event storming)
+  /ddd-storm   ──→ docs/ddd/01-event-storming-*.md    (event storming)
        ↓
-  /ddd-model  ──→ DOMAIN.md                            (Single Source of Truth)
+  /ddd-model   ──→ DOMAIN.md                           (Single Source of Truth)
        ↓
-  /ddd-spec   ──→ docs/specs/spec-*.md                 (Superpowers-ready spec)
+  /ddd-spec    ──→ docs/specs/spec-*.md                (+ open tech questions)
        ↓
-  Superpowers ──→ tests + implementation               (TDD)
+  Superpowers  ──→ brainstorming                       (stack / FE+BE scope /
+       │                                                interaction shape → CLAUDE.md)
+       ↓
+               ──→ writing-plans → executing-plans     (TDD)
+               ──→ finishing-a-development-branch      (merge / PR)
 ```
 
 ## Why this exists
@@ -47,6 +51,22 @@ After install, `ddd-run` is on your `$PATH`.
 curl -L https://github.com/amwtke/ddd-run/releases/latest/download/ddd-run-$(uname -s)-$(uname -m) -o /usr/local/bin/ddd-run
 chmod +x /usr/local/bin/ddd-run
 ```
+
+### Via Claude Code `/install` skill (for contributors)
+
+When you open **this repo** in Claude Code, a local skill is available:
+
+```
+/install
+```
+
+It will, in one shot:
+1. Check the Rust toolchain (`rustc` / `cargo`, ≥ 1.75)
+2. `cargo build --release`
+3. `cargo install --path .` → `~/.cargo/bin/ddd-run`
+4. Verify `ddd-run --version` / `ddd-run --help`
+
+The skill only applies inside the `ddd-run` repo — it won't touch your other Rust projects, and it won't edit your shell rc. See `.claude/skills/install/SKILL.md` for the exact procedure.
 
 ## Usage
 
@@ -113,7 +133,7 @@ The authoritative model: bounded context, **ubiquitous language table**, aggrega
 
 - Architects / senior engineers who use Claude Code / Cursor daily and are tired of steering the AI away from anemic code every five minutes
 - Teams adopting DDD who want AI assistance without losing modeling discipline
-- People preparing for **AI4SE / harness-engineering-style interviews** (the setup demonstrates exactly the AI-as-constrained-execution-engine mindset those interviews look for)
+- Anyone building a non-trivial backend who wants the domain model to drive the code, not the other way around
 
 ## How it relates to Superpowers
 
@@ -121,11 +141,13 @@ The authoritative model: bounded context, **ubiquitous language table**, aggrega
 
 | Phase | Owner |
 |---|---|
-| Strategic modeling (What is this domain?) | **ddd-run** (`/ddd-storm` → `/ddd-model`) |
-| Use case decomposition (What's the next unit?) | **ddd-run** (`/ddd-spec`) |
-| Tactical implementation (Write tests, write code) | **Superpowers** (TDD loop) |
+| Strategic modeling (what is this domain?) | **ddd-run** (`/ddd-storm` → `/ddd-model`) |
+| Use-case decomposition (what's the next unit?) | **ddd-run** (`/ddd-spec`) |
+| Tech-stack / FE+BE scope / interaction shape | **Superpowers** (`brainstorming`) |
+| Step-by-step implementation plan | **Superpowers** (`writing-plans`) |
+| TDD implementation + wrap-up | **Superpowers** (`executing-plans`, `finishing-a-development-branch`) |
 
-`/ddd-spec`'s output format is designed to drop straight into Superpowers' spec workflow.
+The boundary: **ddd-run answers _what_ (business + domain + use cases). Superpowers answers _how_ (stack, scope, interaction, plan, code).** `/ddd-spec`'s output ends with an explicit "open questions for Superpowers" block so the first `brainstorming` run is anchored on tech choices, not re-litigating the model. Decisions are written back to `CLAUDE.md`'s `## 技术栈约定` section so every later session inherits them.
 
 ## Project structure
 
