@@ -1,0 +1,199 @@
+# DDD + Superpowers Harness
+
+> 本文档由 `ddd-run init` 生成,介绍本项目如何使用 DDD + Superpowers 协作开发。
+
+---
+
+## 一、这套 harness 是什么?
+
+当你使用 Claude Code / Cursor 等 AI 工具开发时,最常见的问题是:
+- AI 直接产出"能跑但架构不对"的代码(贫血模型、跨层调用)
+- 术语不一致,同一个概念有三四种命名
+- 一次性生成一大坨代码,难以迭代
+
+本 harness 通过**三个 Claude Code skills + 两份锚点文档**,把 DDD 的建模过程
+和 Superpowers 的 TDD 实现流程串起来,让 AI 产出**符合架构意图**的代码。
+
+## 二、目录布局
+
+```
+your-project/
+├── .claude/
+│   └── skills/
+│       ├── ddd-storm/SKILL.md   # 🔍 事件风暴:从业务描述提取领域概念
+│       ├── ddd-model/SKILL.md   # 🏗 领域建模:识别聚合,更新 DOMAIN.md
+│       └── ddd-spec/SKILL.md    # 📝 Spec 生成:产出 Superpowers 可消化的 spec
+├── CLAUDE.md                    # 🛡 Claude Code 的项目级硬约束
+├── DOMAIN.md                    # 📘 领域模型的 Single Source of Truth
+├── docs/
+│   ├── ddd/                     # 事件风暴、建模过程的中间产物
+│   └── specs/                   # ddd-spec 产出,喂给 Superpowers 的输入
+└── README-DDD-HARNESS.md        # 本文档
+```
+
+## 三、两份锚点文档
+
+### 3.1 `CLAUDE.md` — 项目级硬约束
+
+这份文档是 Claude Code 的**最高优先级规则**。Claude Code 在本项目的每一次操作
+都会读这份文档。它定义:
+
+- 技术栈(Spring Boot / MyBatis / ...)
+- 分层架构(Interfaces / Application / Domain / Infrastructure)
+- **强制规则**:富领域模型、聚合边界、Repository 只对聚合根、TDD 节奏
+- 包结构约定
+- 禁止项(贫血模型、跨聚合事务...)
+
+**作用**:让 AI 不用每次都告诉它"别写贫血模型",而是一次性在 CLAUDE.md 里立规矩。
+
+### 3.2 `DOMAIN.md` — 领域模型的 Single Source of Truth
+
+这份文档是领域模型的**唯一真实源**,包含:
+
+- 限界上下文定义
+- **Ubiquitous Language 术语表**(全项目命名宪法)
+- 聚合清单(聚合根 / Entity / VO / 不变式 / 行为 / 事件)
+- 跨聚合协调关系
+- 建模决策记录(ADR)
+
+**作用**:
+- **代码命名锚定**:所有 class 名、方法名、DTO 字段都必须引用 DOMAIN.md 中的术语
+- **跨会话一致性**:即使多次会话、多人协作,术语都保持一致
+- **面试展示**:这份文档就是你的"领域模型可视化成果"
+
+**修改权限**:`DOMAIN.md` 由 `/ddd-model` 管理,其他 skill 和 Superpowers **不得擅自修改**。
+如果实现过程中发现 DOMAIN.md 有缺失,要**停下来回到 `/ddd-model` 修正**。
+
+## 四、三个 Skill 的使用
+
+### 4.1 `/ddd-storm` — 事件风暴(第一步)
+
+**何时用**:拿到一段业务需求,还没开始建模。
+
+**用法**:
+```
+/ddd-storm 我们要做一个会员积分系统,会员消费可以累计积分,积分可以兑换商品或抵扣现金,积分有过期时间,兑换需要余额足够。
+```
+
+**产出**:
+- `docs/ddd/01-event-storming-<主题>.md`
+- 包含:参与者、命令、领域事件、外部系统、读模型、聚合候选、开放问题
+
+**关键**:这一步**不写代码,只提取业务概念**。
+
+### 4.2 `/ddd-model` — 领域建模(第二步)
+
+**何时用**:事件风暴完成后,需要把概念正式建模。
+
+**用法**:
+```
+/ddd-model
+```
+(读取 `docs/ddd/01-event-storming-*.md`)
+
+**产出**:
+- `docs/ddd/02-domain-model-<主题>.md`(建模过程记录)
+- **更新根目录 `DOMAIN.md`**(Single Source of Truth)
+
+**关键**:
+- 使用判定树分类 Entity / VO / Aggregate Root
+- 严格遵守聚合边界原则(事务/访问/Repository/大小/ID 引用)
+- 对话式建模,每个聚合成型后确认
+
+### 4.3 `/ddd-spec` — Spec 生成(桥接 Superpowers)
+
+**何时用**:DOMAIN.md 建模完毕,要开始实现某个用例。
+
+**用法**:
+```
+/ddd-spec 会员兑换积分
+```
+
+**产出**:
+- `docs/specs/spec-<序号>-<slug>.md`
+- 包含:用例描述、前置/后置条件、业务规则、**Given-When-Then 测试场景**、接口约定、禁止项
+
+**关键**:产出的 spec **严格使用 DOMAIN.md 中的术语**,可直接喂给 Superpowers。
+
+## 五、完整工作流
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  Step 1:业务需求(口头/文档)                                   │
+│         ↓                                                       │
+│  Step 2:/ddd-storm <需求> ──→ docs/ddd/01-event-storming-*.md  │
+│         ↓                                                       │
+│  Step 3:/ddd-model       ──→ DOMAIN.md(SSoT)                  │
+│         ↓                                                       │
+│  Step 4:/ddd-spec <用例> ──→ docs/specs/spec-*.md              │
+│         ↓                                                       │
+│  Step 5:Superpowers 读入 spec → TDD 循环                       │
+│         │   ├─ 生成失败的测试                                   │
+│         │   ├─ 实现聚合根方法                                   │
+│         │   ├─ 测试通过                                         │
+│         │   └─ 重构                                             │
+│         ↓                                                       │
+│  Step 6:回到 Step 4,下一个用例                                │
+└────────────────────────────────────────────────────────────────┘
+```
+
+## 六、一个完整示例
+
+假设你要做"会员积分系统",从零开始:
+
+```bash
+# 1. 项目初始化(已做过一次)
+ddd-run init
+
+# 2. 打开 Claude Code,开始事件风暴
+> /ddd-storm 会员积分系统:会员消费累计积分,可兑换商品或抵扣现金,积分 1 年过期
+
+# 3. Claude 产出 docs/ddd/01-event-storming-*.md,你 review 并补充
+
+# 4. 开始建模
+> /ddd-model
+
+# 5. 对话式确认聚合边界,Claude 更新 DOMAIN.md
+
+# 6. 对第一个用例生成 spec
+> /ddd-spec 会员兑换积分抵扣现金
+
+# 7. Claude 产出 docs/specs/spec-1-redeem-points.md
+
+# 8. 启动 Superpowers 实现
+> 请 Superpowers 按 docs/specs/spec-1-redeem-points.md 的流程实现,先写测试
+
+# 9. TDD 循环完成,回到 Step 6 处理下一个用例
+```
+
+## 七、面试场景下的使用建议
+
+这套 harness 特别适合**AI4SE 类面试**。建议演示节奏:
+
+1. **开场 1 分钟**:`ddd-run init` + 展示 CLAUDE.md,向考官说明你的 harness 理念
+2. **5~10 分钟**:`/ddd-storm` + `/ddd-model`,口述建模思考过程
+3. **3~5 分钟**:`/ddd-spec` 切分用例
+4. **剩余时间**:Superpowers TDD 实现
+
+**考官打分的三个维度**:
+- DDD 建模 → 体现在 `/ddd-storm` + `/ddd-model` 的过程
+- 工程拆解 → 体现在 `/ddd-spec` 的用例切分
+- AI 协作 → 体现在整套 harness 的使用方式
+
+## 八、常见问题
+
+**Q: 可以跳过 `/ddd-storm` 直接 `/ddd-model` 吗?**
+A: 如果需求已经很清晰,可以。但建议至少简化地做一次事件风暴,防止漏掉开放问题。
+
+**Q: DOMAIN.md 什么时候会被修改?**
+A: 只有 `/ddd-model` 会修改它。其他阶段发现问题要停下来回到 `/ddd-model`。
+
+**Q: 和 Superpowers 的 TDD 流程怎么衔接?**
+A: `/ddd-spec` 产出的 spec 文档**就是** Superpowers 的输入。spec 里的
+   Given-When-Then 场景可直接转化为 JUnit 测试用例。
+
+**Q: 我不用 Java 可以吗?**
+A: 可以。修改 `CLAUDE.md` 的"技术栈约定"和"包结构"部分即可。skills 本身与语言无关。
+
+---
+*Generated by ddd-run. 如需更新 harness,重新运行 `ddd-run init --force`。*
