@@ -32,16 +32,25 @@ description: |
 
 ```
 概念 X
- ├─ 有独立身份标识(即使属性全改变也是同一个东西)?
- │   ├─ 是 → Entity
- │   │      └─ 它是聚合的入口,外部只通过它访问内部?→ Aggregate Root
- │   └─ 否 → 它是由属性完全定义的(Money、Address)?→ Value Object
+ ├─ 是"改状态 / 有不变式 / 需事务保护"的东西?
+ │   ├─ 有独立身份标识 → Entity(若是聚合入口则 Aggregate Root)
+ │   ├─ 由属性完全定义(Money、Address) → Value Object
+ │   └─ 规则 / 动作
+ │       ├─ 只依赖单个聚合 → 放在聚合根的方法里
+ │       ├─ 跨聚合,无状态 → Domain Service
+ │       └─ 涉及事务/消息/外部调用 → Application Service(不在 DOMAIN.md 讨论)
  │
- └─ 它是一个"动作 / 规则"而非"名词"?
-     ├─ 规则只依赖单个聚合 → 放在聚合根的方法里
-     ├─ 规则跨聚合,无状态 → Domain Service
-     └─ 涉及事务/消息/外部调用 → Application Service(不在 DOMAIN.md 讨论)
+ └─ 是"只读 / 查询 / 报表 / 列表"的东西(对应事件风暴 §6 读模型)?
+     → 不是聚合,不进 §3 聚合清单。写入 DOMAIN.md §6 读模型章节。
+       选定实现方式:
+         - 单聚合直查:Repository.findById + DTO 映射
+         - 跨聚合联合:Application Service 拼 DTO
+         - 绕过聚合 SQL:JdbcTemplate 写宽表查询
+         - 独立 Read Model 表:事件驱动重建
 ```
+
+**重要**:事件风暴 `01-event-storming-*.md` §6 里的每个读模型都必须出现在 DOMAIN.md §6。
+如果建模阶段丢了,查询侧到实现阶段就彻底消失。
 
 ### Step 3:聚合边界划定原则(强制遵守)
 
@@ -109,7 +118,25 @@ description: |
 仅当规则跨多个聚合且无状态时才列出:
 - `<ServiceName>.<method>`:<做什么,涉及哪些聚合>
 
-## 6. 建模决策记录
+## 6. 读模型(Read Models)
+
+查询清单(对应 GET 端点)。**读模型不是聚合**,不受"一事务一聚合"约束。
+必须把事件风暴 §6 的每个读模型都搬运到这里。
+
+| 查询 | 输入 | 输出 DTO 字段 | 实现方式 | 备注 |
+|---|---|---|---|---|
+| ViewProductDetail | productId | productId, name, unitPrice, status | 单聚合直查 | 复用 ProductRepository.findById |
+| BrowseProducts | page, size, keyword? | List<ProductSummary> + 分页 | 绕过聚合 SQL | 列表页用 |
+| ViewMyCart | customerId | items[(product, qty, unitPrice, subtotal)], total | 跨聚合联合 | Cart + Product 拼装 |
+| ... | | | | |
+
+**实现方式枚举**:
+- `单聚合直查` — `<Aggregate>Repository.findById` + 映射 DTO
+- `跨聚合联合` — Application Service 拼 DTO
+- `绕过聚合 SQL` — `JdbcTemplate` 直查
+- `独立 Read Model 表` — 事件驱动重建(真正 CQRS)
+
+## 7. 建模决策记录
 
 每次重要的建模选择,简要记录一次,便于后续评审与迭代时说明:
 - **决策 1**:为什么 `PointAccount` 是实体而不是值对象?
@@ -117,8 +144,9 @@ description: |
 - **决策 2**:为什么 `PointRedemption` 独立为聚合而不是 `Member` 的一部分?
   → 因为兑换记录有独立生命周期,且查询场景独立,放在 Member 内会导致聚合过大。
 
-## 7. 下一步
-- 对每个用例运行 `/ddd-spec <用例名>` 生成 Superpowers spec
+## 8. 下一步
+- 对每个**命令用例**运行 `/ddd-spec <用例名>` 生成 Superpowers spec
+- **实现 §6 的每个读模型**(简单查询直接实现,复杂查询可先用 `/ddd-spec` 生成查询 spec)
 - spec 中所有命名必须引用本文档的 Ubiquitous Language
 ```
 
