@@ -32,6 +32,19 @@ This CLI doesn't solve that by rewriting what the AI produces. It solves it **by
 
 It's a thin tool — the real value is in the templates it ships.
 
+## v2: Strict 4-ring Clean Architecture (2026-05)
+
+ddd-run v2 enforces Bob Martin's Onion model: `domain → usecase → adapter → framework`,
+inward-only dependencies. The use-case layer is pure POJO (zero Spring, zero SLF4J);
+the **only** `@Transactional` annotation in the entire project lives in a single
+decorator class in the framework layer. An ArchUnit test template is installed by
+default to mechanically enforce these rules in CI.
+
+An ArchUnit `CleanArchitectureTest` is included in the installed template so every
+CI build mechanically validates the Clean Architecture constraints without manual review.
+
+See `CLAUDE.md` R7-R11 in the generated harness for the full rule set.
+
 ## Install
 
 ### From source (requires Rust)
@@ -93,6 +106,16 @@ your-new-project/
 │   └── specs/                    # spec outputs
 └── README-DDD-HARNESS.md         # in-project guide
 ```
+
+Installed assets include:
+
+- `.claude/skills/ddd-storm/SKILL.md` — event storming skill
+- `.claude/skills/ddd-model/SKILL.md` — domain modeling skill
+- `.claude/skills/ddd-spec/SKILL.md` — spec generation skill
+- `CLAUDE.md` — project-level Claude Code rules
+- `DOMAIN.md` — domain model Single Source of Truth
+- `README-DDD-HARNESS.md` — in-project usage guide
+- `src/test/java/architecture/CleanArchitectureTest.java` — ArchUnit guard enforcing Bob's Onion 4-ring Clean Architecture (mechanical CI gate)
 
 ### Flags
 
