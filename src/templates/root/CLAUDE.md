@@ -33,21 +33,26 @@
 
 _待填充(由 `superpowers:brainstorming` 产出后写回本段)_
 
-## 分层架构(强制)
+## 分层架构(Bob 同心圆 4 环,详见 R7)
 
 ```
 ┌──────────────────────────────────────────┐
-│  Interfaces (REST Controller / DTO)       │  ← 只做序列化/反序列化
+│  framework (Ring 4)                       │  ← Spring 装配 + 事务装饰器 + main
 ├──────────────────────────────────────────┤
-│  Application (Application Service)        │  ← 编排/事务/发消息,无业务规则
+│  adapter (Ring 3)                         │  ← REST Controller / Saga / Repository 实现 / ACL
 ├──────────────────────────────────────────┤
-│  Domain (Aggregate / Entity / VO / DS)    │  ← 业务规则的唯一归属
+│  usecase (Ring 2)                         │  ← Interactor (POJO,零 Spring,零 SLF4J)
 ├──────────────────────────────────────────┤
-│  Infrastructure (Repository Impl / MQ)    │  ← 纯技术实现
+│  domain (Ring 1)                          │  ← 实体 / 值对象 / 聚合根 / 领域事件(纯 Java)
 └──────────────────────────────────────────┘
 ```
 
-**依赖方向**:只能由上层依赖下层,**Domain 层不依赖任何其他层**(不得 import Spring 注解除 `@DomainEvent` 之类的自定义)。
+**依赖方向**:只能由外向内。`domain` 不 import 任何东西;`usecase` 只 import `domain`;`adapter` 可 import `usecase` 与 `domain`;`framework` 可 import 一切。
+
+**关键铁律**(完整规则见 R7-R11):
+- usecase 层**禁止**任何 Spring / Jakarta / SLF4J import 或注解
+- 全工程**唯一**的 `@Transactional` 在 `shared.framework.transaction.TransactionalUseCaseDecorator`
+- 领域事件 = 纯 Java record;聚合根登记,Outbox 发布,`@EventListener` 只在 `adapter/messaging/`
 
 ## 强制规则(Hard Rules)
 
@@ -82,7 +87,7 @@ Application Service 只能做这几件事:
 1. 获取聚合根(从 Repository)
 2. 调用聚合根的业务方法
 3. 持久化(通过 Repository)
-4. 发布领域事件
+4. 登记领域事件(聚合根 `events.add(...)`,实际发布由 Repository 的 Outbox 完成,见 R10)
 5. 处理事务边界
 
 **任何 `if/else`、`for` 循环里包含业务判断的代码都必须在 Domain 层,不在 Application**。
