@@ -12,6 +12,8 @@ const SKILL_DDD_SPEC: &str = include_str!("../templates/skills/ddd-spec.md");
 const ROOT_CLAUDE_MD: &str = include_str!("../templates/root/CLAUDE.md");
 const ROOT_DOMAIN_MD: &str = include_str!("../templates/root/DOMAIN.md");
 const ROOT_README: &str = include_str!("../templates/root/README-DDD-HARNESS.md");
+const ROOT_ARCHUNIT_TEST: &str =
+    include_str!("../templates/root/CleanArchitectureTest.java");
 
 pub fn run(target_dir: &str, force: bool, minimal: bool) -> Result<()> {
     let target = PathBuf::from(target_dir)
@@ -46,6 +48,7 @@ pub fn run(target_dir: &str, force: bool, minimal: bool) -> Result<()> {
         install_root_file(&target, "CLAUDE.md", ROOT_CLAUDE_MD, force)?;
         install_root_file(&target, "DOMAIN.md", ROOT_DOMAIN_MD, force)?;
         install_root_file(&target, "README-DDD-HARNESS.md", ROOT_README, force)?;
+        install_archunit_test(&target, force)?;
 
         // 3. Create working directories
         println!();
@@ -74,6 +77,22 @@ fn install_skill(target: &Path, name: &str, content: &str, force: bool) -> Resul
 fn install_root_file(target: &Path, name: &str, content: &str, force: bool) -> Result<()> {
     let path = target.join(name);
     write_file(&path, content, force, name)
+}
+
+/// Install the ArchUnit template under `<target>/src/test/java/architecture/CleanArchitectureTest.java`.
+fn install_archunit_test(target: &Path, force: bool) -> Result<()> {
+    let path = target
+        .join("src")
+        .join("test")
+        .join("java")
+        .join("architecture")
+        .join("CleanArchitectureTest.java");
+    write_file(
+        &path,
+        ROOT_ARCHUNIT_TEST,
+        force,
+        "src/test/java/architecture/CleanArchitectureTest.java",
+    )
 }
 
 /// Write a file, respecting the --force flag.
