@@ -170,6 +170,11 @@ description: |
 ❌ **双向引用**:聚合之间互相持有对方对象
 ❌ **跨聚合事务**:一个事务同时修改两个聚合根
 ❌ **Repository 滥用**:给 VO 或内部 Entity 写 Repository
+❌ **领域层污染**:`domain/**/*.java` 出现任何 framework / Lombok / SLF4J import。
+   Domain 是 4 环最内层(见 CLAUDE.md R7),**理论上一个 jar 就能编译**。
+   如果 domain 类需要日志、ID 生成器或时钟,定义端口接口(如 `LoggerPort`、`IdGenerator`、`ClockPort`),实现在 adapter 层。
+❌ **领域事件被注解污染**:`domain/<aggregate>/events/*.java` 不允许 `@DomainEvent` 自定义注解、Jackson `@JsonProperty`、Lombok 注解等。
+   事件类是纯 Java record + marker interface (`DomainEvent`)。
 
 如用户坚持以上任一反模式,必须明确指出问题并给出 DDD 书中的依据,
 然后由用户决定是否接受。
