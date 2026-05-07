@@ -4,6 +4,54 @@
 
 ---
 
+## Clean Architecture 速览(Bob 同心圆 4 环)
+
+本 harness 强制遵守 4 环向内依赖。详见 CLAUDE.md R7-R11。
+
+```
+domain    Ring 1 — 实体 + 业务规则        (零框架,纯 Java)
+usecase   Ring 2 — Interactor             (POJO,零 Spring,零 SLF4J)
+adapter   Ring 3 — Controller / Saga / Repository impl   (允许 Spring/JPA)
+framework Ring 4 — 装配 + 事务 + main     (允许全 Spring)
+```
+
+事务 / 装配 / 事件订阅都收敛在 ring 3-4。**唯一的 `@Transactional`** 出现在
+`shared.framework.transaction.TransactionalUseCaseDecorator`。
+
+### 范例:CreateOrder 的层级分布
+
+```java
+// usecase/CreateOrderUseCase.java —— Ring 2,零 Spring import
+public class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrderResult> {
+    private final OrderRepository repo;
+    private final PricingGateway pricing;
+    public CreateOrderUseCase(OrderRepository r, PricingGateway p) { this.repo = r; this.pricing = p; }
+    @Override
+    public CreateOrderResult execute(CreateOrderCommand cmd) {
+        // 翻译输入 + 调聚合根 + 保存,业务规则在聚合
+    }
+}
+```
+
+```java
+// framework/config/OrderUseCaseConfig.java —— Ring 4,装配点
+@Configuration
+class OrderUseCaseConfig {
+    @Bean
+    UseCase<CreateOrderCommand, CreateOrderResult> createOrderUseCase(
+            OrderRepository repo, PricingGateway pricing) {
+        return new TransactionalUseCaseDecorator<>(
+            new CreateOrderUseCase(repo, pricing));
+    }
+}
+```
+
+### ArchUnit 守卫
+
+`src/test/java/architecture/CleanArchitectureTest.java` 是 4 环规则的机械执法者
+(由 `ddd-run init` 生成)。**请勿删除其中已有规则**;可在末尾追加项目特定规则。
+CI 必须将这个测试设为合并门槛。
+
 ## 一、这套 harness 是什么?
 
 当你使用 Claude Code / Cursor 等 AI 工具开发时,最常见的问题是:
