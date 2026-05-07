@@ -103,31 +103,85 @@ description: |
 
 ## 接口约定(初稿,可被 Superpowers 细化)
 
-### Command
+> 严格遵守 4 环 Clean Architecture(见 CLAUDE.md R7-R11):用例层零 Spring,装配在 framework 层。
+
+### Command(usecase 层 record,纯 Java)
 ```java
-// Application Service 层入口
-record <CommandName>(
+package com.example.ddd.<aggregate>.usecase;
+public record <CommandName>(
     <UbiquitousLanguageType> <field>,
     ...
 ) {}
 ```
 
-### 聚合根方法
+### Result(usecase 层 record,纯 Java;Controller 不能 import domain)
 ```java
-// Aggregate Root 暴露的业务方法
+package com.example.ddd.<aggregate>.usecase;
+public record <CommandName>Result(
+    String <id>,
+    ...
+) {}
+```
+
+### UseCase 实现(usecase 层 POJO,**零 Spring,零 SLF4J**)
+```java
+package com.example.ddd.<aggregate>.usecase;
+import com.example.ddd.<aggregate>.domain.*;
+import com.example.ddd.shared.usecase.UseCase;
+// ↑ 严禁 import org.springframework.* / jakarta.* / org.slf4j.*
+
+public class <CommandName>UseCase implements UseCase<<CommandName>, <CommandName>Result> {
+    private final <Aggregate>Repository repo;
+    public <CommandName>UseCase(<Aggregate>Repository repo) {
+        this.repo = repo;
+    }
+
+    @Override
+    public <CommandName>Result execute(<CommandName> cmd) {
+        // 业务规则委托给聚合根,这里只编排
+    }
+}
+```
+
+### 聚合根方法(domain 层,业务规则归宿)
+```java
 public <ReturnType> <methodName>(<params>) {
-    // 规则实现;禁止贫血
+    // 不变式守护 + 状态变化 + events.add(...)
+}
+```
+
+### 装配(framework 层,Spring 注解只能在这里)
+```java
+package com.example.ddd.<aggregate>.framework.config;
+
+import com.example.ddd.shared.framework.transaction.TransactionalUseCaseDecorator;
+// + 其他 import
+
+@Configuration
+class <Aggregate>UseCaseConfig {
+    @Bean
+    UseCase<<CommandName>, <CommandName>Result> <commandName>UseCase(
+            <Aggregate>Repository repo, ...) {
+        return new TransactionalUseCaseDecorator<>(
+            new <CommandName>UseCase(repo, ...));
+    }
 }
 ```
 
 ## 禁止项(Guardrails for Superpowers)
-在实现此 spec 时,Superpowers 必须遵守:
-- ❌ 不得把业务规则写进 Controller 或 Application Service
+在实现此 spec 时,Superpowers 必须遵守(参考 CLAUDE.md R7-R11):
+- ❌ 不得把业务规则写进 Controller、Application Service 或 Saga handler
 - ❌ 不得跨聚合直接调用(跨聚合必须通过领域事件)
 - ❌ 不得修改 `DOMAIN.md` 之外的术语(命名必须一致)
 - ❌ 不得绕过聚合根直接修改内部实体
+- ❌ usecase 类**任何 import 框架代码**(`org.springframework.*` / `jakarta.persistence.*` / `jakarta.inject.*` / `org.slf4j.*` / `lombok.*`)
+- ❌ usecase 类出现任何注解(包括 `@Service` / `@Component` / `@Transactional` / `@Autowired`)
+- ❌ usecase 直接调用 `applicationEventPublisher.publishEvent(...)` 或 `LoggerFactory.getLogger(...)`
+- ❌ `@Transactional` 出现在 `TransactionalUseCaseDecorator` 之外
+- ❌ Domain Event 类带任何注解
 - ✅ 必须先写测试(TDD),再写实现
 - ✅ 必须为每个测试场景写一个测试用例
+- ✅ 实现完一个 usecase 后必须通过 `cargo test` 等同的 ArchUnit 检查(`mvn test -Dtest=CleanArchitectureTest` 或同等命令)
 
 ## 交给 Superpowers 的开放问题(技术实施层面)
 
@@ -156,6 +210,10 @@ public <ReturnType> <methodName>(<params>) {
 执行建议:
 > 请 Superpowers 读取 `docs/specs/spec-<n>-<slug>.md`。若 `CLAUDE.md` 技术栈段未填,先启动 brainstorming 决定技术栈与范围并写回;否则直接进入 writing-plans。
 > 实现过程中如发现 DOMAIN.md 中有不一致或缺失的术语,停下来回到 `/ddd-model` 修正。
+
+**实现完每个 usecase 后必须做的两步自检:**
+1. `grep -rE "org\.springframework|jakarta\.|org\.slf4j" src/main/java/com/example/ddd/<aggregate>/usecase/` → 期望零命中
+2. 跑 ArchUnit:`mvn test -Dtest=CleanArchitectureTest`(或 Gradle 等同) → 期望全绿
 ```
 
 ### Step 3B:查询模板(读用例,复杂查询才用)
