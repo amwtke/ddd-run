@@ -74,3 +74,58 @@ fn init_minimal_skips_archunit() {
         .join("architecture").join("CleanArchitectureTest.java");
     assert!(!archunit.exists(), "minimal mode must not install ArchUnit");
 }
+
+#[test]
+fn status_reports_archunit_present_after_init() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let target = tmp.path();
+
+    Command::new(ddd_run_bin())
+        .args(["init", "--dir"])
+        .arg(target)
+        .status()
+        .expect("init failed");
+
+    let output = Command::new(ddd_run_bin())
+        .args(["status", "--dir"])
+        .arg(target)
+        .output()
+        .expect("status failed");
+
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        stdout.contains("CleanArchitectureTest.java"),
+        "status output must mention CleanArchitectureTest.java; got:\n{}",
+        stdout
+    );
+    assert!(
+        stdout.contains("harness is complete"),
+        "status should report complete after init; got:\n{}",
+        stdout
+    );
+}
+
+#[test]
+fn status_flags_missing_archunit_when_only_skills_installed() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let target = tmp.path();
+
+    Command::new(ddd_run_bin())
+        .args(["init", "--minimal", "--dir"])
+        .arg(target)
+        .status()
+        .expect("init --minimal failed");
+
+    let output = Command::new(ddd_run_bin())
+        .args(["status", "--dir"])
+        .arg(target)
+        .output()
+        .expect("status failed");
+
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        stdout.contains("some assets are missing"),
+        "status should report missing assets; got:\n{}",
+        stdout
+    );
+}
