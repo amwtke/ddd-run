@@ -78,7 +78,7 @@ public class CleanArchitectureTest {
         .should().haveFullyQualifiedName(
             "com.example.ddd.shared.framework.transaction.TransactionalUseCaseDecorator");
 
-    // -------- R7: REST controllers may not import domain types --------
+    // -------- R9: REST controllers may not import domain types --------
     @ArchTest
     static final ArchRule web_controller_no_domain = noClasses()
         .that().resideInAPackage("..adapter.web..")

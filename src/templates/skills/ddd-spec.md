@@ -181,7 +181,7 @@ class <Aggregate>UseCaseConfig {
 - ❌ Domain Event 类带任何注解
 - ✅ 必须先写测试(TDD),再写实现
 - ✅ 必须为每个测试场景写一个测试用例
-- ✅ 实现完一个 usecase 后必须通过 `cargo test` 等同的 ArchUnit 检查(`mvn test -Dtest=CleanArchitectureTest` 或同等命令)
+- ✅ 实现完一个 usecase 后必须通过 ArchUnit 检查(`mvn test -Dtest=CleanArchitectureTest` 或 Gradle 等同命令)
 
 ## 交给 Superpowers 的开放问题(技术实施层面)
 
